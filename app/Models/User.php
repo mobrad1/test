@@ -19,6 +19,7 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'badge_id',
         'password',
     ];
 
@@ -63,5 +64,73 @@ class User extends Authenticatable
     public function watched()
     {
         return $this->belongsToMany(Lesson::class)->wherePivot('watched', true);
+    }
+
+    /**
+     * The achievements that a user has unlocked.
+     */
+    public function achievements()
+    {
+        return $this->belongsToMany(Achievement::class,'user_achievements')->withTimestamps();
+    }
+
+    /**
+     * The badge that a user belongs to
+     */
+    public function badge()
+    {
+        return $this->belongsTo(Badge::class);
+    }
+    /**
+     * Get next available achievements
+     */
+    public function getNextAvailableAchievementsAttribute()
+    {
+        $myAchievements = $this->achievements()->pluck("id")->toArray();
+
+        $allAchievements = Achievement::all()->pluck("id")->toArray();
+
+        return isset(Achievement::whereIn("id",array_values(array_diff($allAchievements,$myAchievements)))->pluck('name')[0])?Achievement::whereIn("id",array_values(array_diff($allAchievements,$myAchievements)))->pluck('name')[0] : 'No next achievement' ;
+    }
+
+     /**
+     * Get next badge
+     */
+
+    public function getNextBadgeAttribute()
+    {
+        if(Badge::all()->count() > 0){
+           $nextBadges = Badge::all()->sortBy("achievement_points")->filter(function ($value) {
+            return $value->achievement_points > $this->badge->achievement_points ;
+           });
+           if($nextBadges->count() > 0){
+                return $nextBadges->first()->title;
+            }
+        }
+        return "No Next badge";
+    }
+
+     /**
+     * Get remain badges to unlock
+     */
+
+    public function getRemainingToUnlockNextBadgeAttribute()
+    {
+        // First get all badges and sort them by achievement points
+        $nextBadges = Badge::all()->sortBy("achievement_points")->filter(function ($value) {
+            return $value->achievement_points > $this->badge->achievement_points ;
+        });
+        if($nextBadges->count() == 0){
+            return 0;
+        }
+        return $nextBadges->first()->achievement_points - $this->badge->achievement_points;
+    }
+
+    /**
+     * Get Current Badge
+     */
+    public function getCurrentBadgeAttribute()
+    {
+        return $this->badge->title;
     }
 }
