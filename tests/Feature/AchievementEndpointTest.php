@@ -79,6 +79,7 @@ class AchievementEndpointTest extends TestCase
 
         $response = $this->get("/users/{$user->id}/achievements");
 
-        $response->assertJson(['next_available_achievements' => $user->next_available_achievements->toArray()]);
+
+        $response->assertJson(['next_available_achievements' => $user->next_available_achievements]);
     }
 }
